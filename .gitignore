@@ -1,0 +1,30 @@
+# Environment variables (contains secrets)
+.env
+
+# Data files (too large for git)
+data/
+
+# Results (generated)
+results/
+
+# Legacy scripts
+legacy/
+
+# Docs
+docs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
