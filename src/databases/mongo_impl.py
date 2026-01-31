@@ -34,8 +34,13 @@ class MongoBenchmark(DatabaseBenchmark):
         self.db = None
 
     def connect(self) -> None:
-        """Establish connection to MongoDB."""
+        """Establish connection to MongoDB and drop existing database for clean benchmark."""
         self.client = MongoClient(self.uri)
+        
+        # Drop existing database for clean benchmark
+        self.client.drop_database(self.database_name)
+        print(f"Dropped existing database: {self.database_name}")
+        
         self.db = self.client[self.database_name]
         print(f"Connected to MongoDB database: {self.database_name}")
 

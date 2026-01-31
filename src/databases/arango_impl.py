@@ -29,12 +29,18 @@ class ArangoBenchmark(DatabaseBenchmark):
         self.db = None
 
     def connect(self) -> None:
+        """Establish connection to ArangoDB and drop existing database for clean benchmark."""
         self.client = ArangoClient(hosts=self.host)
         sys_db = self.client.db('_system', username=self.username, password=self.password)
         
-        if not sys_db.has_database(self.database_name):
-            sys_db.create_database(self.database_name)
-            print(f"Created database: {self.database_name}")
+        # Drop existing database for clean benchmark
+        if sys_db.has_database(self.database_name):
+            sys_db.delete_database(self.database_name)
+            print(f"Dropped existing database: {self.database_name}")
+        
+        # Create fresh database
+        sys_db.create_database(self.database_name)
+        print(f"Created database: {self.database_name}")
         
         self.db = self.client.db(self.database_name, username=self.username, password=self.password)
         print(f"Connected to ArangoDB database: {self.database_name}")
@@ -95,28 +101,33 @@ class ArangoBenchmark(DatabaseBenchmark):
         cursor = self.db.aql.execute(aql)
         doc = next(cursor, None)
         
-        # Dataset-specific realistic queries
+        # Dataset-specific realistic queries - use COUNT for fair comparison with MongoDB
         if collection_name == 'amazon':
             # Amazon: Score > 4 OR Summary contains 'good'
-            aql_filter = f"""
-            FOR doc IN {collection_name}
-            FILTER doc.Score > 4 OR CONTAINS(LOWER(doc.Summary), 'good')
-            RETURN doc
+            aql_count = f"""
+            RETURN LENGTH(
+                FOR doc IN {collection_name}
+                FILTER doc.Score > 4 OR CONTAINS(LOWER(doc.Summary), 'good')
+                RETURN 1
+            )
             """
         else:
             # Goodreads: rating >= 3 OR review_text contains keywords
-            aql_filter = f"""
-            FOR doc IN {collection_name}
-            FILTER doc.rating >= 3 OR 
-                   CONTAINS(LOWER(doc.review_text), 'fantastic') OR
-                   CONTAINS(LOWER(doc.review_text), 'suspense') OR
-                   CONTAINS(LOWER(doc.review_text), 'story')
-            RETURN doc
+            aql_count = f"""
+            RETURN LENGTH(
+                FOR doc IN {collection_name}
+                FILTER doc.rating >= 3 OR 
+                       CONTAINS(LOWER(doc.review_text), 'fantastic') OR
+                       CONTAINS(LOWER(doc.review_text), 'suspense') OR
+                       CONTAINS(LOWER(doc.review_text), 'story')
+                RETURN 1
+            )
             """
         
-        cursor = self.db.aql.execute(aql_filter)
-        results = list(cursor)
-        print(f"  Found {len(results)} documents matching query")
+        # Execute count query
+        cursor = self.db.aql.execute(aql_count, ttl=600)
+        count = next(cursor, 0)
+        print(f"  Found {count} documents matching query")
 
     def update_data(self, collection_name: str, limit: int = 10000) -> int:
         """Update documents in ArangoDB collection using realistic queries."""

@@ -30,20 +30,28 @@ class RavenBenchmark(DatabaseBenchmark):
         self.store: Optional[DocumentStore] = None
 
     def connect(self) -> None:
-        """Establish connection to RavenDB."""
+        """Establish connection to RavenDB and drop existing database for clean benchmark."""
         self.store = DocumentStore(urls=[self.url], database=self.database_name)
         self.store.initialize()
         
-        # Ensure database exists
+        # Drop existing database for clean benchmark
+        try:
+            from ravendb.serverwide.operations.common import DeleteDatabaseOperation
+            self.store.maintenance.server.send(
+                DeleteDatabaseOperation(self.database_name, hard_delete=True)
+            )
+            print(f"Dropped existing database: {self.database_name}")
+        except Exception as e:
+            if "does not exist" not in str(e).lower():
+                print(f"Note: {e}")
+        
+        # Create fresh database
         try:
             record = DatabaseRecord(self.database_name)
             self.store.maintenance.server.send(CreateDatabaseOperation(record))
             print(f"Created database: {self.database_name}")
         except Exception as e:
-            if "already exists" in str(e):
-                print(f"Database {self.database_name} already exists")
-            else:
-                print(f"Warning creating DB: {e}")
+            print(f"Warning creating DB: {e}")
         
         print(f"Connected to RavenDB database: {self.database_name}")
 
@@ -80,7 +88,41 @@ class RavenBenchmark(DatabaseBenchmark):
                         print(f"  Progress: {total_count} documents inserted...")
         
         print(f"Inserted {total_count} documents into {collection_name}")
+        
+        # Create index for efficient querying after import
+        self._create_index_for_collection(collection_name)
+        
         return total_count
+
+    def _create_index_for_collection(self, collection_name: str) -> None:
+        """Create an index for the collection to enable efficient queries."""
+        from ravendb.documents.indexes.definitions import IndexDefinition, IndexFieldOptions
+        from ravendb.documents.operations.indexes import PutIndexesOperation
+        
+        # Define index based on collection
+        if collection_name == 'amazon':
+            index_name = f"Amazon/ByScore"
+            index_def = IndexDefinition(
+                name=index_name,
+                maps={f"from doc in docs.{collection_name}s select new {{ doc.Score, doc.Summary }}"}
+            )
+        else:
+            index_name = f"Goodreads/ByRating"
+            index_def = IndexDefinition(
+                name=index_name,
+                maps={f"from doc in docs.{collection_name}s select new {{ doc.rating, doc.review_text }}"}
+            )
+        
+        try:
+            self.store.maintenance.send(PutIndexesOperation(index_def))
+            print(f"  Created index: {index_name}")
+            
+            # Wait for index to be non-stale
+            import time
+            print(f"  Waiting for index to complete...")
+            time.sleep(5)  # Give RavenDB time to index
+        except Exception as e:
+            print(f"  Note creating index: {e}")
 
     def read_data(self, collection_name: str) -> None:
         """Perform read operations on RavenDB collection with realistic queries."""
@@ -90,27 +132,28 @@ class RavenBenchmark(DatabaseBenchmark):
             if results:
                 print(f"  Read 1 document from {collection_name}")
             
-            # Dataset-specific realistic queries
-            # Note: We use .take() to limit results and avoid memory exhaustion
-            # For counting, we sample and estimate or use limited query
+            # Count matching documents (same as MongoDB/ArangoDB)
+            # RavenDB needs to iterate to count since count_lazily requires index
             if collection_name == 'amazon':
-                # Amazon: Score > 4 (limited to prevent OOM)
+                # Amazon: Score > 4 - use statistics from query
                 query = (
                     session.advanced.document_query(collection_name=collection_name)
                     .where_greater_than("Score", 4)
                 )
             else:
-                # Goodreads: rating >= 3 (limited to prevent OOM)
+                # Goodreads: rating >= 3
                 query = (
                     session.advanced.document_query(collection_name=collection_name)
                     .where_greater_than_or_equal("rating", 3)
                 )
             
-            # Get count without loading all documents into memory
-            # Use statistics to get total count
-            query.wait_for_non_stale_results()
-            stats = query.get_query_result().total_results
-            print(f"  Found {stats} documents matching query")
+            # Execute query and get count from statistics
+            # This scans all matching docs but only returns count
+            count = 0
+            for _ in query:
+                count += 1
+            
+            print(f"  Found {count} documents matching query")
 
     def update_data(self, collection_name: str, limit: int = 10000) -> int:
         """Update documents in RavenDB collection using realistic queries."""
