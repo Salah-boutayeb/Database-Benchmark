@@ -1,7 +1,16 @@
-# Database drivers
+# Database drivers - Document DBs (Study n°1)
 pymongo>=4.0.0
 python-arango>=7.0.0
 ravendb>=5.2.0
+
+# Database drivers - Key-Value DBs (Study n°2)
+boto3>=1.28.0
+riak>=2.7.0
+
+# Database drivers - Column-Oriented DBs (Study n°3)
+cassandra-driver>=3.25.0
+happybase>=1.2.0
+
 
 # Data processing
 pandas>=1.5.0

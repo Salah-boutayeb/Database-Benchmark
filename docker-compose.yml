@@ -150,12 +150,73 @@ services:
     networks:
       - benchmark-network
 
+  # ============================================
+  # KEY-VALUE DATABASES (Study n°2)
+  # ============================================
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    # Increased heap to 6GB for Goodreads dataset (1.85M docs)
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    environment:
+      - JAVA_OPTS=-Xmx6g -Xms1g
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    networks:
+      - benchmark-network
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    container_name: dynamodb-admin
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+    depends_on:
+      - dynamodb-local
+    networks:
+      - benchmark-network
+
+  riak:
+    image: basho/riak-kv:latest
+    container_name: benchmark_riak
+    restart: unless-stopped
+    ports:
+      - "8087:8087"
+      - "8098:8098"
+    environment:
+      - CLUSTER_NAME=riakts
+      - WAIT_FOR_ERLANG=120
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+    volumes:
+      - riak_data:/var/lib/riak
+    networks:
+      - benchmark-network
+
 volumes:
   mongo_data:
   arango_data:
   raven_data:
   prometheus_data:
   grafana_data:
+  dynamodb_data:
+  riak_data:
 
 networks:
   benchmark-network:
