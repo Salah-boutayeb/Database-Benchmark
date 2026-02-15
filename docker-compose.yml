@@ -209,6 +209,90 @@ services:
     networks:
       - benchmark-network
 
+  # ============================================
+  # COLUMN-ORIENTED DATABASES (Study n°3)
+  # ============================================
+  cassandra:
+    image: cassandra:latest
+    container_name: benchmark_cassandra
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=BenchmarkCluster
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - MAX_HEAP_SIZE=2G
+      - HEAP_NEWSIZE=800M
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - benchmark-network
+
+  hbase:
+    image: harisekhon/hbase:1.3
+    container_name: benchmark_hbase
+    hostname: hbase-docker
+    ports:
+      - "16010:16010"
+      - "9090:9090"
+    environment:
+      - HBASE_CONF_hbase_rootdir=file:///hbase_data
+      - HBASE_MANAGES_ZK=true
+    volumes:
+      - hbase_data:/hbase_data
+    # command: /opt/hbase/bin/hbase thrift start # harisekhon image starts everything by default usually, or we need to check
+    networks:
+      - benchmark-network
+
+  # ============================================
+  # GRAPH DATABASES (Study n°4)
+  # ============================================
+  neo4j:
+    image: neo4j:5.14.0
+    container_name: benchmark_neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/benchmark
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - benchmark-network
+
+  orientdb:
+    image: orientdb:2.2.37
+    container_name: benchmark_orientdb
+    restart: unless-stopped
+    ports:
+      - "2424:2424" # Binary
+      - "2480:2480" # HTTP
+    environment:
+      - ORIENTDB_ROOT_PASSWORD=benchmark
+    volumes:
+      - orientdb_data:/orientdb/databases
+    networks:
+      - benchmark-network
+
+  janusgraph:
+    image: janusgraph/janusgraph:latest
+    container_name: benchmark_janusgraph
+    restart: unless-stopped
+    ports:
+      - "8182:8182"
+    environment:
+      - JANUS_PROPS_TEMPLATE=berkeleyje
+    volumes:
+      - janusgraph_data:/var/lib/janusgraph
+    networks:
+      - benchmark-network
+
 volumes:
   mongo_data:
   arango_data:
@@ -217,6 +301,11 @@ volumes:
   grafana_data:
   dynamodb_data:
   riak_data:
+  cassandra_data:
+  hbase_data:
+  neo4j_data:
+  orientdb_data:
+  janusgraph_data:
 
 networks:
   benchmark-network:

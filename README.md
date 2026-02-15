@@ -1,189 +1,135 @@
-# 🔥 NoSQL Document Database Benchmark
+# 🔥 NoSQL Multi-Model Benchmark Suite
 
-A comprehensive benchmarking framework for comparing **MongoDB**, **ArangoDB**, and **RavenDB** performance on real-world datasets.
+A comprehensive benchmarking framework for evaluating performance across four distinct NoSQL families: **Document**, **Key-Value**, **Column-Oriented**, and **Graph** databases.
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/)
+![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
+![Docker](https://img.shields.io/badge/docker-required-blue.svg)
 
-## 🎯 Features
+## 🎯 Overview
 
-- **OOP Architecture** - Clean, extensible design using Abstract Base Class pattern
-- **Real-time Monitoring** - Prometheus + Grafana dashboards for live metrics
-- **Container Metrics** - CPU, RAM, Network I/O via cAdvisor
-- **CLI Interface** - Flexible command-line options
-- **Unified Reports** - JSON + CSV output formats
+This project implements a modular, Object-Oriented benchmarking suite to compare the performance of various NoSQL solutions on real-world datasets (Amazon Reviews, Goodreads).
+
+### Key Features
+- **Polymorphic Architecture**: Common `DatabaseBenchmark` interface for all 11 database implementations.
+- **Docker Integration**: Automated environment setup via `docker-compose`.
+- **Real-Time Monitoring**: Prometheus and Grafana integration for resource tracking (CPU/RAM).
+- **Automated Reporting**: Generation of JSON metrics and visualization charts.
+
+---
 
 ## 📊 Databases Tested
 
-| Database | Driver         | Container            |
-| -------- | -------------- | -------------------- |
-| MongoDB  | PyMongo        | `mongodb`          |
-| ArangoDB | python-arango  | `benchmark_arango` |
-| RavenDB  | ravendb-python | `benchmark_raven`  |
+| Family | Database | Driver | Implementation File |
+| :--- | :--- | :--- | :--- |
+| **Document** | **MongoDB** | `pymongo` | `mongo_impl.py` |
+| | **ArangoDB** | `python-arango` | `arango_impl.py` |
+| | **RavenDB** | `ravendb-python` | `raven_impl.py` |
+| **Key-Value** | **DynamoDB** | `boto3` | `dynamodb_impl.py` |
+| | **Riak KV** | `riak` | `riak_impl.py` |
+| **Column** | **Cassandra** | `cassandra-driver` | `cassandra_impl.py` |
+| | **HBase** | `happybase` | `hbase_impl.py` |
+| **Graph** | **Neo4j** | `neo4j` | `neo4j_impl.py` |
+| | **JanusGraph** | `gremlinpython` | `janusgraph_impl.py` |
+| | **OrientDB** | `pyorient` | `orientdb_impl.py` |
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Docker & Docker Compose
-- Python 3.9+
-- ~10GB disk space for datasets
-
-### 1. Clone & Setup
-
-```bash
-git clone https://github.com/yourusername/db-benchmark.git
-cd db-benchmark
-
-# Create environment file
-cp .env.example .env
-
-# Install Python dependencies
-pip install -r requirements.txt
-```
-
-### 2. Configure Credentials (Optional)
-
-Edit `.env` to customize database passwords:
-
-```bash
-MONGO_USER=admin
-MONGO_PASSWORD=your_secure_password
-ARANGO_PASSWORD=your_secure_password
-GRAFANA_ADMIN_USER=admin
-GRAFANA_ADMIN_PASSWORD=your_grafana_password
-```
-
-### 3. Start Docker Services
-
-```bash
-docker compose up -d
-```
-
-This starts:
-
-- 3 databases (MongoDB, ArangoDB, RavenDB)
-- Prometheus + Grafana monitoring
-- cAdvisor for container metrics
-
-### 4. Add Your Data
-
-Place your datasets in the `data/` directory:
-
-```bash
-data/
-├── goodreads_reviews_mystery_thriller_crime.json  # JSON Lines format
-└── amazon_reviews.csv                              # CSV format
-```
-
-### 5. Run Benchmarks
-
-```bash
-# All databases
-python main.py
-
-# Specific database(s)
-python main.py --db mongodb
-python main.py --db mongodb arangodb
-
-# List available databases
-python main.py --list
-```
-
-## 📈 Monitoring Dashboard
-
-Access real-time metrics at:
-
-| Service              | URL                   | Credentials   |
-| -------------------- | --------------------- | ------------- |
-| **Grafana**    | http://localhost:3000 | admin / admin |
-| **Prometheus** | http://localhost:9090 | -             |
-| **cAdvisor**   | http://localhost:8082 | -             |
+---
 
 ## 📁 Project Structure
 
 ```
 DB_benchmarking/
-├── main.py                  # CLI entry point
-├── src/
-│   ├── base/
-│   │   ├── benchmark_base.py    # Abstract Base Class
-│   │   └── resource_monitor.py  # Docker metrics
-│   └── databases/
-│       ├── mongo_impl.py        # MongoDB implementation
-│       ├── arango_impl.py       # ArangoDB implementation
-│       └── raven_impl.py        # RavenDB implementation
-├── monitoring/              # Prometheus + Grafana config
-├── data/                    # Input datasets (gitignored)
-├── results/                 # Output metrics (gitignored)
-└── docs/                    # Documentation
+├── data/                        # Datasets (gitignored)
+├── docs/                        # Project documentation
+├── documentation_repports/      # Generated reports (MD/PDF) & Architecture
+│   ├── ARCHITECTURE.md          # System Architecture & Config
+│   ├── rapport_graphe.md        # Graph DB Study Report
+│   └── images_graphe/           # Generated Charts
+├── legacy/                      # Deprecated/Debug scripts
+├── monitoring/                  # Prometheus & Grafana config
+├── reports/                     # Report generation scripts
+│   ├── generate_graph_charts.py # Graph DB Charts
+│   └── generate_column_charts.py # Column DB Charts
+├── results/                     # Raw benchmark metrics (JSON/CSV)
+├── src/                         # Source Code
+│   ├── base/                    # Abstract Base Classes
+│   └── databases/               # Database Implementations
+├── docker-compose.yml           # Container orchestration
+├── main.py                      # Document DB Runner
+├── main_kv.py                   # Key-Value DB Runner
+├── main_column.py               # Column DB Runner
+└── main_graph.py                # Graph DB Runner
 ```
 
-## ⚙️ Operations Benchmarked
+---
 
-| Operation        | Description                  |
-| ---------------- | ---------------------------- |
-| **Import** | Bulk load entire dataset     |
-| **Read**   | Complex queries with filters |
-| **Update** | Modify up to 10K documents   |
-| **Delete** | Remove modified documents    |
-| **Export** | Write all data to JSON file  |
+## 🚀 Quick Start
 
-### Query Examples
+### 1. Setup Environment
+```bash
+# Clone repository
+git clone <repo-url>
+cd DB_benchmarking
 
-**Amazon Dataset:**
+# Install dependencies
+pip install -r requirements.txt
 
-```
-Score > 4 OR Summary contains 'good'
-```
-
-**Goodreads Dataset:**
-
-```
-rating >= 3 OR review_text contains ['Fantastic', 'suspense', 'story']
+# Start all database containers
+docker compose up -d
 ```
 
-## 📋 Metrics Collected
+### 2. Prepare Data
+Download and place the following datasets in the `data/` directory:
+- `amazon_reviews.csv`
+- `goodreads_reviews_mystery_thriller_crime.json`
 
-- **Duration** (seconds)
-- **CPU Usage** (% average)
-- **RAM Usage** (MB average)
-- **Network I/O** (bytes)
+### 3. Run Benchmarks
 
-## 🔧 Extending
-
-Add a new database by:
-
-1. Create `src/databases/newdb_impl.py`:
-
-```python
-from ..base import DatabaseBenchmark
-
-class NewDBBenchmark(DatabaseBenchmark):
-    def connect(self): ...
-    def insert_data(self, file_path, collection, batch_size=10000): ...
-    def read_data(self, collection): ...
-    def update_data(self, collection, limit=10000): ...
-    def delete_data(self, collection): ...
-    def export_data(self, collection): ...
-    def close(self): ...
+#### Study 1: Document Databases
+Comparing Import, CRUD, and Extract performance.
+```bash
+python main.py --db mongodb arangodb ravendb
 ```
 
-2. Update `src/databases/__init__.py`
-3. Add config to `main.py`
-
-## 📝 Requirements
-
-```txt
-pandas>=1.5.0
-pymongo>=4.0.0
-python-arango>=7.0.0
-ravendb>=5.2.0
-python-dotenv>=1.0.0
+#### Study 2: Key-Value Databases
+Comparing Put/Get latency and throughput.
+```bash
+python main_kv.py --db dynamodb riak --dataset amazon
 ```
+
+#### Study 3: Column-Oriented Databases
+Comparing rigorous schema-based operations.
+```bash
+python main_column.py --db cassandra hbase --dataset all
+```
+
+#### Study 4: Graph Databases
+Comparing Graph Construction (Insertion) and Traversal (Recommendation) performance.
+```bash
+python main_graph.py --db neo4j janusgraph orientdb --dataset goodreads
+```
+> **Note:** OrientDB insertion on Goodreads is significantly slower (~43 mins).
+
+---
+
+## 📈 Reports & Analysis
+
+Detailed analysis and performance charts are available in the `documentation_repports/` directory.
+
+- **Architecture:** [ARCHITECTURE.md](documentation_repports/ARCHITECTURE.md)
+- **Graph Study:** [rapport_graphe.md](documentation_repports/rapport_graphe.md) (French)
+
+### Generating Charts
+You can regenerate charts from the latest result files:
+```bash
+python reports/generate_graph_charts.py
+python reports/generate_column_charts.py
+```
+
+---
 
 ## 🛑 Cleanup
 
+To stop and remove all containers (including data volumes):
 ```bash
-docker compose down -v  # Remove containers and volumes
+docker compose down -v
 ```
