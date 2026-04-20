@@ -1,0 +1,213 @@
+
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rapport Colonne</title>
+        
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        img { max-width: 100%; height: auto; display: block; margin: 20px auto; border: 1px solid #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        code { background-color: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background-color: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        blockquote { border-left: 4px solid #4CAF50; margin: 0; padding-left: 15px; color: #666; }
+        @media print {
+            @page { margin: 2cm; }
+            body { margin: 0; padding: 0; }
+            /* Attempt to hide default browser headers/footers */
+            @page { size: auto; margin: 0mm; }
+            body { margin: 1cm; }
+        }
+    </style>
+    
+    </head>
+    <body>
+        <h1>Rapport d'Étude n°3 : Bases de Données Orientées Colonnes (Cassandra vs HBase)</h1>
+<h2>1. Introduction</h2>
+<p>Cette étude évalue les performances et l'évolutivité des bases de données orientées colonnes (&quot;Wide Column Stores&quot;), spécifiquement <strong>Apache Cassandra</strong> et <strong>Apache HBase</strong>. Ces systèmes sont conçus pour gérer de très grands volumes de données distribuées avec une haute disponibilité et une scalabilité linéaire.</p>
+<h3>Objectifs</h3>
+<ul>
+<li>Comparer les performances d'insertion massive (Write Heavy).</li>
+<li>Évaluer l'efficacité des lectures ciblées (Point Read) et des scans de plages (Range Scan) basés sur des séries temporelles.</li>
+<li>Analyser la consommation des ressources (CPU, RAM).</li>
+</ul>
+<h3>Environnement de Test</h3>
+<ul>
+<li><strong>Machine</strong> : Local Docker Environment (Linux).</li>
+<li><strong>Cassandra</strong> : Image <code>cassandra:latest</code> (Version 4.x/5.x).</li>
+<li><strong>HBase</strong> : Image <code>dajobe/hbase</code> (Version 2.x).</li>
+<li><strong>Datasets</strong> :
+<ul>
+<li><strong>Amazon Reviews</strong> (568k enregistrements, ~300 Mo).</li>
+<li><strong>Goodreads Reviews</strong> (1.85M enregistrements, ~1.8 Go).</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>2. Modélisation des Données</h2>
+<p>La modélisation est cruciale dans les bases orientées colonnes, car les requêtes doivent être connues à l'avance.</p>
+<h3>Apache Cassandra</h3>
+<p>Nous avons utilisé une modélisation optimisée pour les requêtes par utilisateur et par temps (Time Series) :</p>
+<ul>
+<li><strong>Partition Key</strong> : <code>user_id</code> (Distribution des données).</li>
+<li><strong>Clustering Key</strong> : <code>timestamp</code> (Tri des données sur le disque).</li>
+<li><strong>Table</strong> : <code>reviews</code>.</li>
+</ul>
+<pre><code class="language-sql">CREATE TABLE reviews (
+    user_id text,
+    timestamp timestamp,
+    review_id text,
+    product_id text,
+    rating float,
+    summary text,
+    review_text text,
+    PRIMARY KEY (user_id, timestamp)
+) WITH CLUSTERING ORDER BY (timestamp DESC);
+</code></pre>
+<p>Cette structure permet de récupérer efficacement l'historique d'un utilisateur (<code>SELECT * FROM reviews WHERE user_id = ?</code>).</p>
+<h3>Apache HBase</h3>
+<p>HBase stocke les données sous forme de chaînes d'octets triées par clé de ligne (Row Key).</p>
+<ul>
+<li><strong>Row Key</strong> : <code>user_id</code> + <code>(Long.MAX_VALUE - timestamp)</code> + <code>review_id</code>.
+<ul>
+<li>L'inversion du timestamp permet de trier les avis les plus récents en premier (puisque HBase trie lexicographiquement).</li>
+</ul>
+</li>
+<li><strong>Column Family</strong> : <code>cf</code> (stocke toutes les colonnes : product_id, rating, etc.).</li>
+</ul>
+<p>Cette clé composite permet des &quot;Prefix Scans&quot; performants pour récupérer tous les avis d'un utilisateur.</p>
+<h3>2.3. Opérations Testées</h3>
+<ul>
+<li><strong>Insertion (Write)</strong> : Insertion par lots.</li>
+<li><strong>Lecture Ciblée (Point Read)</strong> : Récupération par clé unique.</li>
+<li><strong>Scan de Plage (Range Scan)</strong> : Récupération d'une série temporelle (HBase).</li>
+</ul>
+<blockquote>
+<p>[!NOTE]
+<strong>Pourquoi l'export a été ignoré :</strong>
+L'opération &quot;Export&quot; (Full Table Scan) a été exclue de cette étude. Les bases orientées colonnes comme HBase et Cassandra sont conçues pour des accès aléatoires rapides, et non pour des exports complets séquentiels. Effectuer un export complet via un script client simple (comme ce benchmark) est un &quot;anti-pattern&quot; inefficace. Dans un environnement de production, cela nécessiterait des outils de traitement distribués comme Apache Spark pour paralléliser la lecture sur tous les nœuds.</p>
+</blockquote>
+<hr />
+<h2>3. Résultats et Analyse</h2>
+<h3>3.1. Performance d'Insertion (Write Throughput)</h3>
+<p><img src="images_column/execution_time.png" alt="Insertion Time" /></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Base de Données</th>
+<th style="text-align:left">Dataset</th>
+<th style="text-align:left">Temps Total (s)</th>
+<th style="text-align:left">Observations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Cassandra</strong></td>
+<td style="text-align:left">Amazon</td>
+<td style="text-align:left">1924.8 s</td>
+<td style="text-align:left">Très lent (32 min). Probablement dû à la surcharge du<em>BatchStatement</em> mal tuné ou à la latence réseau Docker simple nœud.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Cassandra</strong></td>
+<td style="text-align:left">Goodreads</td>
+<td style="text-align:left">5410.3 s</td>
+<td style="text-align:left">Extrêmement lent (90 min). Limitation CPU/RAM évidente.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>HBase</strong></td>
+<td style="text-align:left">Amazon</td>
+<td style="text-align:left"><strong>96.3 s</strong></td>
+<td style="text-align:left">Excellent. L'écriture séquentielle via Thrift est très efficace ici.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>HBase</strong></td>
+<td style="text-align:left">Goodreads</td>
+<td style="text-align:left"><strong>331.8 s</strong></td>
+<td style="text-align:left">Maintient la performance à l'échelle (~5.5 min).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Analyse :</strong></p>
+<ul>
+<li><strong>HBase</strong> domine largement sur l'insertion massive dans cette configuration (Single Node Docker). Le débit est ~20x supérieur à Cassandra.</li>
+<li><strong>Cassandra</strong> a souffert. L'utilisation de <code>BatchStatement</code> pour de gros volumes est un anti-pattern connu si les partitions sont distribuées aléatoirement (le nœud coordinateur est surchargé). Une approche asynchrone (<code>execute_async</code>) sans batch aurait probablement été plus performante.</li>
+</ul>
+<h3>3.2. Performance de Lecture (Point Read &amp; Range Scan)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Base de Données</th>
+<th style="text-align:left">Dataset</th>
+<th style="text-align:left">Temps (s)</th>
+<th style="text-align:left">Latence Mois (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Cassandra</strong></td>
+<td style="text-align:left">Amazon</td>
+<td style="text-align:left">2.94 s</td>
+<td style="text-align:left">~2.9 ms</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>HBase</strong></td>
+<td style="text-align:left">Amazon</td>
+<td style="text-align:left"><strong>2.80 s</strong></td>
+<td style="text-align:left">~2.8 ms</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Cassandra</strong></td>
+<td style="text-align:left">Goodreads</td>
+<td style="text-align:left"><strong>3.90 s</strong></td>
+<td style="text-align:left"><strong>~3.9 ms</strong></td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>HBase</strong></td>
+<td style="text-align:left">Goodreads</td>
+<td style="text-align:left">7.24 s</td>
+<td style="text-align:left">~7.2 ms</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Analyse :</strong></p>
+<ul>
+<li>Sur le petit dataset (Amazon), les performances sont identiques.</li>
+<li>Sur le gros dataset (Goodreads), <strong>Cassandra</strong> scale mieux (3.9s vs 7.2s). Sa structure de partitionnement par <code>user_id</code> permet un accès direct constant (O(1)), alors que HBase doit scanner les Blocks HFile même avec le bon RowKey, ce qui peut être légèrement plus coûteux à grande échelle sans optimisation (Bloom Filters).</li>
+</ul>
+<h3>3.3. Consommation des Ressources</h3>
+<p><img src="images_column/memory_usage.png" alt="Memory Usage" />
+<img src="images_column/cpu_usage.png" alt="CPU Usage" /></p>
+<p><strong>CPU :</strong></p>
+<ul>
+<li><strong>HBase</strong> : Pics très élevés (&gt;100% sur plusieurs cœurs) pendant l'insertion rapide, montrant une utilisation efficace des ressources pour traiter la charge.</li>
+<li><strong>Cassandra</strong> : Utilisation CPU plus modérée (~30%), suggérant que le goulot d'étranglement n'était pas le CPU mais plutôt les attentes d'E/S ou de lock (Coordinateur).</li>
+</ul>
+<p><strong>RAM :</strong></p>
+<ul>
+<li><strong>Cassandra</strong> : ~2.6 - 2.8 Go. Très gourmand (JVM Heap).</li>
+<li><strong>HBase</strong> : ~1.1 - 1.3 Go. Plus léger dans cette configuration standalone.</li>
+</ul>
+<hr />
+<h2>4. Difficultés et Limitations</h2>
+<ul>
+<li><strong>HBase Driver</strong> : <code>happybase</code> (Thrift) est une couche supplémentaire, mais elle s'est avérée étonnamment robuste pour l'écriture séquentielle.</li>
+<li><strong>Cassandra Tuning</strong> : La configuration par défaut de l'image Docker et le driver Python utilisant des batchs synchrones ont pénalisé Cassandra. Un tuning fin (<code>concurrent_writes</code>, <code>token_aware_routing</code>) serait nécessaire pour égaler HBase.</li>
+</ul>
+<h2>5. Conclusion</h2>
+<ul>
+<li><strong>Vainqueur Écriture (Batch)</strong> : <strong>HBase</strong>. Sa simplicité d'écriture séquentielle (même via Thrift) a écrasé Cassandra dans ce scénario d'ingestion massive &quot;brute&quot;.</li>
+<li><strong>Vainqueur Lecture (Scaling)</strong> : <strong>Cassandra</strong>. Elle offre une latence de lecture plus stable et plus faible (presque 2x plus rapide) quand le volume de données augmente.</li>
+<li><strong>Efficacité</strong> : HBase a consommé 2x moins de RAM pour un travail d'écriture 20x plus rapide.</li>
+</ul>
+<p>Dans le contexte de ce benchmark (Python, Docker, Time-Series), <strong>HBase</strong> est le gagnant global pour l'ingestion, tandis que <strong>Cassandra</strong> reste le roi de la lecture à faible latence à l'échelle.</p>
+
+    </body>
+    </html>
+    

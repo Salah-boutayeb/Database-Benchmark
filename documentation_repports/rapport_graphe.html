@@ -1,0 +1,195 @@
+
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rapport Graphe</title>
+        
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        img { max-width: 100%; height: auto; display: block; margin: 20px auto; border: 1px solid #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        code { background-color: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background-color: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        blockquote { border-left: 4px solid #4CAF50; margin: 0; padding-left: 15px; color: #666; }
+        @media print {
+            @page { margin: 2cm; }
+            body { margin: 0; padding: 0; }
+            /* Attempt to hide default browser headers/footers */
+            @page { size: auto; margin: 0mm; }
+            body { margin: 1cm; }
+        }
+    </style>
+    
+    </head>
+    <body>
+        <h1>Étude n°4 : Rapport de Benchmark Base de Données Orientée Graphe</h1>
+<p><strong>Comparaison de Neo4j, JanusGraph et OrientDB</strong></p>
+<h2>1. Introduction</h2>
+<p>Cette étude évalue les performances et l'efficacité des ressources de trois bases de données orientées graphe de premier plan :</p>
+<ul>
+<li><strong>Neo4j</strong> : Le leader du marché, utilisant un moteur de stockage de graphe natif.</li>
+<li><strong>JanusGraph</strong> : Une base de données de graphe distribuée et évolutive, optimisée pour le stockage et le traitement de grands graphes.</li>
+<li><strong>OrientDB</strong> : Une base de données multi-modèle supportant les graphes, les documents, les clé-valeurs et les objets.</li>
+</ul>
+<p>L'objectif est de comparer ces solutions sur des tâches de création de graphe (insertion) et de traversée (recommandation) dans un environnement conteneurisé Docker.</p>
+<h2>2. Méthodologie</h2>
+<h3>2.1 Jeux de Données</h3>
+<p>Nous avons utilisé deux jeux de données de relations &quot;Utilisateur a noté Produit&quot; :</p>
+<ol>
+<li>
+<p><strong>Avis Amazon (568K Liens)</strong></p>
+<ul>
+<li><strong>Source :</strong> <code>amazon_reviews.csv</code></li>
+<li><strong>Nœuds :</strong> Utilisateurs et Produits</li>
+<li><strong>Arêtes :</strong> REVIEWED (avec propriété note)</li>
+<li><strong>Volume :</strong> ~568k enregistrements</li>
+</ul>
+</li>
+<li>
+<p><strong>Avis Goodreads (1.85M Liens)</strong></p>
+<ul>
+<li><strong>Source :</strong> <code>goodreads_reviews_mystery_thriller_crime.json</code></li>
+<li><strong>Volume :</strong> ~1.85M enregistrements</li>
+<li><strong>Particularité :</strong> Nécessite un mapping spécifique (<code>book_id</code> -&gt; <code>product_id</code>).</li>
+</ul>
+</li>
+</ol>
+<h3>2.2 Flux de Benchmark</h3>
+<p>Pour chaque base de données :</p>
+<ol>
+<li><strong>Graph Creation (Insertion) :</strong> Insertion des nœuds (User, Product) et des arêtes (REVIEWED).</li>
+<li><strong>Recommendation (Lecture) :</strong> Traversée du graphe pour recommander des produits à des utilisateurs (User -&gt; REVIEWED -&gt; Product &lt;- REVIEWED -&gt; User -&gt; REVIEWED -&gt; Product).</li>
+</ol>
+<h2>3. Résultats et Analyse</h2>
+<h3>3.1 Performance d'Insertion (Création du Graphe)</h3>
+<p>Neo4j s'est montré le plus rapide et le plus efficace pour l'ingestion de données, suivi de JanusGraph. OrientDB s'est avéré significativement plus lent.</p>
+<p><strong>Temps d'Insertion (en secondes) :</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Jeu de Données</th>
+<th style="text-align:left">Neo4j</th>
+<th style="text-align:left">JanusGraph</th>
+<th style="text-align:left">OrientDB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Amazon (568k)</strong></td>
+<td style="text-align:left"><strong>41.9s</strong></td>
+<td style="text-align:left">168.3s</td>
+<td style="text-align:left">812.5s</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Goodreads (1.85M)</strong></td>
+<td style="text-align:left"><strong>121.6s</strong></td>
+<td style="text-align:left">2381.2s</td>
+<td style="text-align:left">2583.1s (~43 min)</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_graphe/graph_insert_amazon.png" alt="Temps d'Insertion Amazon" /></p>
+<p><img src="images_graphe/graph_insert_goodreads.png" alt="Temps d'Insertion Goodreads" /></p>
+<p><strong>Analyse :</strong></p>
+<ul>
+<li><strong>Neo4j :</strong> Impressionnant de rapidité (122s pour 1.85M d'arêtes). Son architecture native et l'utilisation efficace de la mémoire (via l'instruction <code>UNWIND</code> pour les lots) lui donnent un avantage décisif.</li>
+<li><strong>JanusGraph :</strong> Performances décentes sur les petits volumes, mais ralentissement marqué sur Goodreads (40 min). Cela peut être dû à la gestion des transactions ou au backend de stockage par défaut (BerkeleyJE).</li>
+<li><strong>OrientDB :</strong> Extrêmement lent en écriture, prenant plus de 43 minutes pour insérer le jeu de données Goodreads. Bien qu'il ait fini par réussir (contrairement aux estimations initiales de blocage), son débit d'ingestion est nettement inférieur à Neo4j (~20x plus lent).</li>
+</ul>
+<h3>3.2 Performance de Lecture (Recommandation)</h3>
+<p>Pour les requêtes de traversée (recommandation), les performances sont globalement très bonnes pour toutes les solutions une fois le graphe construit.</p>
+<p><strong>Temps de Recommandation (moyenne pour 20 utilisateurs) :</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Jeu de Données</th>
+<th style="text-align:left">Neo4j</th>
+<th style="text-align:left">JanusGraph</th>
+<th style="text-align:left">OrientDB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Amazon</strong></td>
+<td style="text-align:left">0.39s</td>
+<td style="text-align:left">1.46s</td>
+<td style="text-align:left"><strong>0.24s</strong></td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Goodreads</strong></td>
+<td style="text-align:left"><strong>0.22s</strong></td>
+<td style="text-align:left">0.28s</td>
+<td style="text-align:left">0.25s</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_graphe/graph_read_latency.png" alt="Latence de Recommandation" /></p>
+<p><strong>Analyse :</strong></p>
+<ul>
+<li>Les moteurs de graphe sont extrêmement performants pour ce type de requête (millisecondes).</li>
+<li>Neo4j et JanusGraph offrent des temps de réponse quasi-instantanés sur Goodreads.</li>
+<li>OrientDB, malgré sa lenteur en écriture, offre d'excellentes performances de lecture (0.25s), rivalisant avec Neo4j sur les requêtes de traversée.</li>
+</ul>
+<h3>3.3 Consommation des Ressources</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Base de Données</th>
+<th style="text-align:left">CPU Moyen (Amazon)</th>
+<th style="text-align:left">RAM Moyenne (Amazon)</th>
+<th style="text-align:left">Observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Neo4j</strong></td>
+<td style="text-align:left">146%</td>
+<td style="text-align:left">~700 Mo</td>
+<td style="text-align:left">Efficace, bon usage du CPU pour la vitesse.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>JanusGraph</strong></td>
+<td style="text-align:left">123%</td>
+<td style="text-align:left">~4.2 Go</td>
+<td style="text-align:left">Très gourmand en RAM (Java).</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>OrientDB</strong></td>
+<td style="text-align:left">105%</td>
+<td style="text-align:left">~3.5 Go</td>
+<td style="text-align:left">Gourmand en RAM également.</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_graphe/graph_resources.png" alt="Consommation Ressources" /></p>
+<p>Sur Goodreads, JanusGraph a maintenu une consommation RAM élevée (~5 Go). Neo4j est resté très économe (~800 Mo), ce qui est remarquable.</p>
+<h2>4. Difficultés Rencontrées</h2>
+<h3>4.1 Incohérence du Schéma de Données (Supernœud)</h3>
+<p>Un défi majeur a été identifié lors de l'intégration du jeu de données Goodreads.</p>
+<ul>
+<li><strong>Problème :</strong> Le code attendait un champ <code>product_id</code>, mais le dataset JSON utilisait <code>book_id</code>.</li>
+<li><strong>Conséquence :</strong> Les bases de données inséraient tous les livres sous un seul nœud &quot;Product&quot; avec l'ID &quot;unknown&quot;.</li>
+<li><strong>Impact :</strong> Cela a créé un &quot;supernœud&quot; avec 1.8 millions d'arêtes entrantes. Lors des tentatives de lecture ou d'ajout d'arêtes, les bases de données (particulièrement JanusGraph et Neo4j) se bloquaient ou crashaient en tentant de traverser/indexer ce nœud massif.</li>
+<li><strong>Solution :</strong> Modification des scripts d'importation (<code>src/databases/*_impl.py</code>) pour gérer le fallback : <code>product_id = doc.get('product_id', doc.get('book_id', 'unknown'))</code>.</li>
+</ul>
+<h3>4.2 Lenteur d'OrientDB</h3>
+<p>OrientDB s'est révélé beaucoup plus lent pour les insertions massives transactionnelles par rapport à Neo4j. L'optimisation des lots (&quot;batches&quot;) a été nécessaire mais n'a pas suffi à combler l'écart de performance.</p>
+<h2>5. Conclusion</h2>
+<p><strong>Neo4j</strong> est le vainqueur incontesté de ce benchmark.</p>
+<ol>
+<li><strong>Vitesse :</strong> Il est ~4x plus rapide que JanusGraph et ~20x plus rapide qu'OrientDB en insertion.</li>
+<li><strong>Efficacité :</strong> Il consomme 5 à 6 fois moins de RAM que ses concurrents basés sur Java (JanusGraph/OrientDB).</li>
+<li><strong>Stabilité :</strong> Il a géré le dataset moyen (Amazon) et grand (Goodreads) sans configuration complexe.</li>
+</ol>
+<p><strong>Recommandation :</strong> Pour des cas d'usage nécessitant une ingestion rapide et une faible empreinte mémoire, Neo4j est le choix recommandé.</p>
+
+    </body>
+    </html>
+    

@@ -1,0 +1,259 @@
+
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Synthese</title>
+        
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        img { max-width: 100%; height: auto; display: block; margin: 20px auto; border: 1px solid #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        code { background-color: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background-color: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        blockquote { border-left: 4px solid #4CAF50; margin: 0; padding-left: 15px; color: #666; }
+        @media print {
+            @page { margin: 2cm; }
+            body { margin: 0; padding: 0; }
+            /* Attempt to hide default browser headers/footers */
+            @page { size: auto; margin: 0mm; }
+            body { margin: 1cm; }
+        }
+    </style>
+    
+    </head>
+    <body>
+        <h1>Synthèse Globale : Benchmark Multi-Modèle NoSQL</h1>
+<p><strong>Comparaison des performances : Document vs Clé-Valeur vs Colonnes vs Graphe</strong></p>
+<h2>1. Introduction Globale</h2>
+<p>Ce projet de benchmarking a pour objectif d'évaluer les performances et l'efficacité des différentes familles de bases de données NoSQL (Multi-Modèle) à travers 4 études de cas distinctes. Nous avons testé <strong>11 bases de données</strong> sur des jeux de données réels (Amazon Reviews &amp; Goodreads) pour comprendre leurs forces et leurs faiblesses respectives.</p>
+<h3>Le Spectre NoSQL Testé</h3>
+<ul>
+<li><strong>Orientée Documents :</strong> MongoDB vs ArangoDB vs RavenDB</li>
+<li><strong>Clé-Valeur (Key-Value) :</strong> DynamoDB vs Riak KV</li>
+<li><strong>Orientée Colonnes (Wide Column) :</strong> Apache Cassandra vs Apache HBase</li>
+<li><strong>Orientée Graphe :</strong> Neo4j vs JanusGraph vs OrientDB</li>
+</ul>
+<h2>2. Environnement de Test</h2>
+<p>Tous les benchmarks ont été réalisés sur une machine unique afin de garantir une base de comparaison équitable.</p>
+<ul>
+<li><strong>Matériel :</strong>
+<ul>
+<li><strong>CPU :</strong> AMD Ryzen 7 7735HS (8 Cœurs / 16 Threads) @ 3.2GHz</li>
+<li><strong>RAM :</strong> 16 Go DDR5</li>
+<li><strong>Stockage :</strong> SSD NVMe</li>
+</ul>
+</li>
+<li><strong>Logiciel :</strong>
+<ul>
+<li><strong>OS :</strong> Linux (Pop!_OS / Ubuntu)</li>
+<li><strong>Conteneurisation :</strong> Docker &amp; Docker Compose (Limites de ressources configurées par service)</li>
+<li><strong>Langage de Script :</strong> Python 3.10+ (Drivers officiels ou recommandés)</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>3. Résumé par Famille de Base de Données</h2>
+<h3>3.1. Bases Orientées Documents</h3>
+<ul>
+<li><strong>Cas d'usage :</strong> Stockage de données semi-structurées (JSON), flexibilité de schéma, requêtes complexes.</li>
+<li><strong>Podium :</strong>
+<ol>
+<li><strong>MongoDB</strong> (Vainqueur incontesté : Performance brute et efficacité)</li>
+<li>ArangoDB (Bon second, polyvalent)</li>
+<li>RavenDB (En retrait sur ce workload spécifique)</li>
+</ol>
+</li>
+</ul>
+<p><strong>Tableau Récapitulatif (Insertion Goodreads) :</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Base de Données</th>
+<th style="text-align:left">Temps (s)</th>
+<th style="text-align:left">Débit (docs/s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>MongoDB</strong></td>
+<td style="text-align:left"><strong>31.05s</strong></td>
+<td style="text-align:left">~59 500</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>RavenDB</strong></td>
+<td style="text-align:left">130.39s</td>
+<td style="text-align:left">~14 100</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>ArangoDB</strong></td>
+<td style="text-align:left">144.93s</td>
+<td style="text-align:left">~12 700</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_doc/doc_insert_throughput.png" alt="Comparaison Débit Insertion Document" /></p>
+<hr />
+<h3>3.2. Bases Clé-Valeur (Key-Value)</h3>
+<ul>
+<li><strong>Cas d'usage :</strong> Accès ultra-rapide par clé primaire, cache, sessions utilisateur, paniers d'achat.</li>
+<li><strong>Podium :</strong>
+<ol>
+<li><strong>DynamoDB (Local)</strong> (Excellente performance, faible CPU)</li>
+<li>Riak KV (Performant mais très gourmand en ressources CPU)</li>
+</ol>
+</li>
+</ul>
+<p><strong>Tableau Récapitulatif (Insertion Goodreads) :</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Base de Données</th>
+<th style="text-align:left">Temps (s)</th>
+<th style="text-align:left">Débit (ops/s)</th>
+<th style="text-align:left">CPU Moyen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>DynamoDB</strong></td>
+<td style="text-align:left"><strong>400.2s</strong></td>
+<td style="text-align:left">~4 620</td>
+<td style="text-align:left"><strong>66-76%</strong></td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Riak KV</strong></td>
+<td style="text-align:left">1846.1s</td>
+<td style="text-align:left">~1 002</td>
+<td style="text-align:left">929-973%</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_kv/kv_insert_throughput.png" alt="Comparaison Débit Insertion KV" /></p>
+<hr />
+<h3>3.3. Bases Orientées Colonnes</h3>
+<ul>
+<li><strong>Cas d'usage :</strong> Séries temporelles, logs, écriture massive (Write Heavy), analytique sur grands volumes.</li>
+<li><strong>Observations :</strong>
+<ul>
+<li><strong>HBase</strong> excelle en écriture (ingestion massive séquentielle).</li>
+<li><strong>Cassandra</strong> est meilleure en lecture aléatoire et passage à l'échelle.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Tableau Récapitulatif (Insertion Goodreads) :</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Base de Données</th>
+<th style="text-align:left">Temps (s)</th>
+<th style="text-align:left">Analyse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>HBase</strong></td>
+<td style="text-align:left"><strong>331.8s</strong></td>
+<td style="text-align:left">Ingestion massive très rapide via Thrift.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Cassandra</strong></td>
+<td style="text-align:left">5410.3s</td>
+<td style="text-align:left">Lente sans tuning fin (Batching synchrone limitant).</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_column/execution_time.png" alt="Insertion Time Colonne" /></p>
+<hr />
+<h3>3.4. Bases Orientées Graphe</h3>
+<ul>
+<li><strong>Cas d'usage :</strong> Réseaux sociaux, recommandation, détection de fraude, gestion des dépendances.</li>
+<li><strong>Podium :</strong>
+<ol>
+<li><strong>Neo4j</strong> (Leader absolu : Vitesse, Stockage natif, Cypher)</li>
+<li>JanusGraph (Distribué, mais lourd en RAM)</li>
+<li>OrientDB (Polyvalent, mais retrait sur l'insertion massive)</li>
+</ol>
+</li>
+</ul>
+<p><strong>Tableau Récapitulatif (Insertion Goodreads) :</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Base de Données</th>
+<th style="text-align:left">Temps (s)</th>
+<th style="text-align:left">RAM Moyenne</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Neo4j</strong></td>
+<td style="text-align:left"><strong>121.6s</strong></td>
+<td style="text-align:left"><strong>~0.8 Go</strong></td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>JanusGraph</strong></td>
+<td style="text-align:left">2381.2s</td>
+<td style="text-align:left">~5.0 Go</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>OrientDB</strong></td>
+<td style="text-align:left">2583.1s</td>
+<td style="text-align:left">~3.5 Go</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_graphe/graph_insert_goodreads.png" alt="Temps d'Insertion Goodreads" /></p>
+<hr />
+<h2>4. Conclusion Générale &amp; Recommandations</h2>
+<p>Ce benchmark met en lumière qu'il n'y a pas de &quot;base de données unique&quot; pour tous les besoins. Chaque modèle excelle dans son domaine :</p>
+<ol>
+<li><strong>Performance Pure (CRUD/JSON) :</strong> <strong>MongoDB</strong> reste le roi indétrônable pour les applications web classiques.</li>
+<li><strong>Relations Complexes (Graphe) :</strong> <strong>Neo4j</strong> offre des performances de traversée et d'insertion inégalées pour les données connectées.</li>
+<li><strong>Simplicité &amp; Cache :</strong> <strong>DynamoDB</strong> est idéal pour les charges de travail clé-valeur simples et rapides.</li>
+<li><strong>Big Data / Séries Temporelles :</strong> <strong>HBase</strong> (pour l'écriture) et <strong>Cassandra</strong> (pour la lecture) sont taillés pour les pétaoctets, bien que leur complexité opérationnelle soit plus élevée.</li>
+</ol>
+<h3>Tableau de Recommandation Finale</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Scénario</th>
+<th style="text-align:left">Recommandation</th>
+<th style="text-align:left">Alternative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Site Web / App Mobile</strong></td>
+<td style="text-align:left"><strong>MongoDB</strong></td>
+<td style="text-align:left">Couchbase, RavenDB</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Réseau Social / Recommandation</strong></td>
+<td style="text-align:left"><strong>Neo4j</strong></td>
+<td style="text-align:left">ArangoDB (si besoin multi-modèle)</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Logs / IoT / Séries Temporelles</strong></td>
+<td style="text-align:left"><strong>Cassandra</strong></td>
+<td style="text-align:left">HBase, InfluxDB</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Session / Panier / Config</strong></td>
+<td style="text-align:left"><strong>DynamoDB / Redis</strong></td>
+<td style="text-align:left">Riak KV</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Groupe N°9  - Projet DB Benchmarking</em></p>
+
+    </body>
+    </html>
+    

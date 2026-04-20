@@ -1,0 +1,234 @@
+
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rapport Doc</title>
+        
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        img { max-width: 100%; height: auto; display: block; margin: 20px auto; border: 1px solid #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        code { background-color: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background-color: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        blockquote { border-left: 4px solid #4CAF50; margin: 0; padding-left: 15px; color: #666; }
+        @media print {
+            @page { margin: 2cm; }
+            body { margin: 0; padding: 0; }
+            /* Attempt to hide default browser headers/footers */
+            @page { size: auto; margin: 0mm; }
+            body { margin: 1cm; }
+        }
+    </style>
+    
+    </head>
+    <body>
+        <h1>Étude n°1 : Rapport de Benchmark Bases de Données Orientées Documents</h1>
+<p><strong>Comparaison de MongoDB vs ArangoDB vs RavenDB</strong></p>
+<h2>1. Introduction</h2>
+<p>Cette première étude évalue les performances de trois bases de données NoSQL orientées documents majeures :</p>
+<ol>
+<li><strong>MongoDB</strong> : Le leader du marché, connu pour sa performance et sa flexibilité (BSON).</li>
+<li><strong>ArangoDB</strong> : Une base multi-modèle (Document, Graphe, Clé-Valeur) native.</li>
+<li><strong>RavenDB</strong> : Une base ACID transactionnelle orientée documents, populaire dans l'écosystème .NET.</li>
+</ol>
+<p>L'objectif est de comparer leur comportement sur des opérations standard (CRUD, Import, Export) avec des jeux de données réels.</p>
+<h2>2. Méthodologie</h2>
+<h3>2.1 Jeux de Données</h3>
+<p>Les tests ont été réalisés sur deux volumes de données :</p>
+<ul>
+<li><strong>Amazon Reviews</strong> (568K documents, ~367 Mo)</li>
+<li><strong>Goodreads Reviews</strong> (1.85M documents, ~1.8 Go)</li>
+</ul>
+<h3>2.2 Protocole de Test</h3>
+<p>L'environnement Dockerisé a exécuté les étapes suivantes pour chaque base :</p>
+<ol>
+<li><strong>Import (Bulk Insert)</strong> : Chargement de l'ensemble du dataset.</li>
+<li><strong>CRUD (Read/Update/Delete)</strong> : Exécution de requêtes complexes (filtres sur champs texte/numérique), mises à jour et suppressions.</li>
+<li><strong>Export</strong> : Extraction de toutes les données vers un fichier JSON.</li>
+<li><strong>Monitoring</strong> : Mesure continue du CPU et de la RAM via <code>docker stats</code>.</li>
+</ol>
+<h2>3. Résultats et Analyse</h2>
+<h3>3.1 Performance d'Insertion</h3>
+<p>MongoDB démontre une supériorité nette sur l'ingestion massive de données.</p>
+<ul>
+<li>
+<p><strong>Amazon (568K)</strong> :</p>
+<ul>
+<li><strong>MongoDB</strong> : <strong>10.23s</strong> (~55 500 docs/s)</li>
+<li><strong>ArangoDB</strong> : 29.32s (~19 400 docs/s)</li>
+<li><strong>RavenDB</strong> : 41.83s (~13 600 docs/s)</li>
+</ul>
+</li>
+<li>
+<p><strong>Goodreads (1.85M)</strong> :</p>
+<ul>
+<li><strong>MongoDB</strong> : <strong>31.05s</strong> (~59 500 docs/s)</li>
+<li><strong>RavenDB</strong> : 130.39s (~14 100 docs/s)</li>
+<li><strong>ArangoDB</strong> : 144.93s (~12 700 docs/s)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Analyse :</strong> MongoDB est <strong>3 à 5 fois plus rapide</strong> que ses concurrents pour l'écriture. RavenDB et ArangoDB offrent des performances similaires, mais nettement en retrait sur ce type de charge massive brute.</p>
+<h3>Tableau Comparatif : Insertion</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Opération</th>
+<th style="text-align:left">MongoDB</th>
+<th style="text-align:left">ArangoDB</th>
+<th style="text-align:left">RavenDB</th>
+<th style="text-align:left">Gagnant</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Amazon (568K)</strong></td>
+<td style="text-align:left"><strong>10.23s</strong></td>
+<td style="text-align:left">29.32s</td>
+<td style="text-align:left">41.83s</td>
+<td style="text-align:left">MongoDB (x2.8)</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Goodreads (1.85M)</strong></td>
+<td style="text-align:left"><strong>31.05s</strong></td>
+<td style="text-align:left">144.93s</td>
+<td style="text-align:left">130.39s</td>
+<td style="text-align:left">MongoDB (x4.2)</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Débit Max</strong></td>
+<td style="text-align:left"><strong>~59.5k ops/s</strong></td>
+<td style="text-align:left">~19.4k ops/s</td>
+<td style="text-align:left">~14.1k ops/s</td>
+<td style="text-align:left">MongoDB</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_doc/doc_insert_duration.png" alt="Comparaison Durée Insertion" /></p>
+<p><img src="images_doc/doc_insert_throughput.png" alt="Comparaison Débit Insertion" /></p>
+<h3>3.2 Performance CRUD et Export</h3>
+<p>Sur les opérations mixtes (Lecture, Mise à jour, Export), MongoDB confirme son avance.</p>
+<ul>
+<li>
+<p><strong>CRUD (Goodreads)</strong> :</p>
+<ul>
+<li><strong>MongoDB</strong> : 2.56s (quasi-instantané)</li>
+<li><strong>ArangoDB</strong> : 14.58s</li>
+<li><strong>RavenDB</strong> : 75.97s (très lent)</li>
+</ul>
+</li>
+<li>
+<p><strong>Export (Goodreads)</strong> :</p>
+<ul>
+<li><strong>MongoDB</strong> : 29.17s</li>
+<li><strong>ArangoDB</strong> : 37.87s</li>
+<li><strong>RavenDB</strong> : 89.08s</li>
+</ul>
+</li>
+</ul>
+<p><strong>Analyse :</strong> RavenDB souffre particulièrement sur les opérations CRUD et d'export dans cette configuration, étant jusqu'à <strong>30x plus lent</strong> que MongoDB sur le CRUD. ArangoDB se défend mieux mais reste en seconde position.</p>
+<h3>Tableau Comparatif : CRUD &amp; Export</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Opération</th>
+<th style="text-align:left">MongoDB</th>
+<th style="text-align:left">ArangoDB</th>
+<th style="text-align:left">RavenDB</th>
+<th style="text-align:left">Écart</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>CRUD Amazon</strong></td>
+<td style="text-align:left"><strong>1.21s</strong></td>
+<td style="text-align:left">3.41s</td>
+<td style="text-align:left">38.07s</td>
+<td style="text-align:left">Mongo 30x plus rapide que Raven</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>CRUD Goodreads</strong></td>
+<td style="text-align:left"><strong>2.56s</strong></td>
+<td style="text-align:left">14.58s</td>
+<td style="text-align:left">75.97s</td>
+<td style="text-align:left">Mongo 5.7x plus rapide qu'Arango</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Export Goodreads</strong></td>
+<td style="text-align:left"><strong>29.17s</strong></td>
+<td style="text-align:left">37.87s</td>
+<td style="text-align:left">89.08s</td>
+<td style="text-align:left">Mongo 3x plus rapide que Raven</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_doc/doc_crud_duration.png" alt="Comparaison Durée CRUD" /></p>
+<p><img src="images_doc/doc_export_duration.png" alt="Comparaison Durée Export" /></p>
+<h3>3.3 Consommation des Ressources</h3>
+<p>L'efficacité énergétique (CPU/RAM par document traité) varie considérablement.</p>
+<ul>
+<li><strong>CPU</strong> : Les trois bases consomment entre <strong>55% et 65%</strong> de CPU lors de l'import. Cependant, comme MongoDB finit le travail 5x plus vite, son coût CPU total (CPU * Temps) est radicalement plus faible.</li>
+<li><strong>Mémoire</strong> :
+<ul>
+<li><strong>RavenDB</strong> utilise le plus de mémoire (~2.8 Go sur Goodreads).</li>
+<li><strong>ArangoDB</strong> semble avoir une gestion mémoire très agressive ou efficace (~430 Mo moyens sur Goodreads, mais 2.4 Go sur Amazon ? Possible effet de Garbage Collection, à vérifier).</li>
+<li><strong>MongoDB</strong> utilise une quantité modérée de RAM (~1-2.3 Go) mais l'utilise très efficacement pour le débit.</li>
+</ul>
+</li>
+</ul>
+<h3>Tableau Comparatif : Ressources (Import)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Métrique</th>
+<th style="text-align:left">MongoDB</th>
+<th style="text-align:left">ArangoDB</th>
+<th style="text-align:left">RavenDB</th>
+<th style="text-align:left">Observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>CPU Moyen</strong></td>
+<td style="text-align:left"><strong>37% - 64%</strong></td>
+<td style="text-align:left">~60%</td>
+<td style="text-align:left">55% - 61%</td>
+<td style="text-align:left">Similaire, mais Mongo finit plus vite</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>RAM Moyenne (Go)</strong></td>
+<td style="text-align:left"><strong>1.1 - 2.3 GB</strong></td>
+<td style="text-align:left">0.4 - 2.4 GB</td>
+<td style="text-align:left">2.5 - 2.8 GB</td>
+<td style="text-align:left">RavenDB consomme le plus</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Efficacité</strong></td>
+<td style="text-align:left"><strong>Haute</strong></td>
+<td style="text-align:left">Moyenne</td>
+<td style="text-align:left">Basse</td>
+<td style="text-align:left">Mongo a le meilleur ratio Perf/Ressource</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images_doc/doc_cpu_usage.png" alt="Consommation CPU Moyenne" /></p>
+<p><img src="images_doc/doc_memory_usage.png" alt="Utilisation Mémoire Moyenne" /></p>
+<h2>4. Conclusion</h2>
+<p>Pour des charges de travail de type &quot;Document Store&quot; pur (Stockage JSON, requêtes simples) :</p>
+<ol>
+<li><strong>Le Gagnant : MongoDB</strong>. Il surclasse ArangoDB et RavenDB sur toutes les métriques de performance pure (Vitesse d'insertion, Latence CRUD, Export). C'est le choix par défaut pour la performance brute.</li>
+<li><strong>ArangoDB</strong> : Bien que moins performant en pur document, sa force réside dans son approche multi-modèle (Graphe). Il est un &quot;bon deuxième&quot; acceptable si les besoins graphes sont anticipés (objet de l'Étude n°3).</li>
+<li><strong>RavenDB</strong> : Se montre le moins performant dans ce benchmark spécifique. Il peut avoir d'autres atouts (transactions ACID, intégration .NET) qui ne sont pas mis en valeur par ce test de performance brute.</li>
+</ol>
+<p><strong>Recommandation :</strong> Utilisez <strong>MongoDB</strong> pour les applications nécessitant un haut débit d'écriture et de lecture de documents. Considérez <strong>ArangoDB</strong> si la flexibilité du modèle de données (Joins, Graphes) est une priorité sur la performance brute.</p>
+
+    </body>
+    </html>
+    
